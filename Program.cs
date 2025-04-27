@@ -1,4 +1,6 @@
-﻿namespace Program
+﻿using System.Reflection;
+
+namespace Program
 {
   public interface IAccount
   {
@@ -30,9 +32,11 @@
       Console.WriteLine("Can't do this action");
       return false;
     }
-
     public void Increment(float ammount) => Money += ammount;
-
+    public override string ToString()
+    {
+      return $"Owner: {Owner}\nCurrent Balance: {Money}\nId: {Id}";
+    }
 
   }
 
@@ -55,11 +59,11 @@
       }
       return variable;
     }
-    public static IAccount? ReadAccount(List<Account> AccountsDB)
+    public static Account? ReadAccountOwner(List<Account> AccountsDB)
     {
       string Owner;
       int pin;
-      IAccount? account;
+      Account? account;
       Console.WriteLine("Please enter the username of the account");
       Owner = ReadInput<string>();
       if(!AccountsDB.Any(x => x.Owner == Owner))
@@ -73,12 +77,32 @@
       if (account == null) Console.WriteLine("Incorrect PIN");
       return account;
     }
+    public static Account? ReadAccountRemitent(List<Account> AccountsDB)
+    {
+      string Owner;
+      Account? account;
+      Console.WriteLine("Please enter the username of the account");
+      Owner = ReadInput<string>();
+      if (!AccountsDB.Any(x => x.Owner == Owner))
+      {
+        Console.WriteLine($"There is no accoun with username {Owner}");
+        return null;
+      }
+      account = AccountsDB.Find(a => a.Owner == Owner);
+      return account;
+    }
+    public static void FormatDecorator(Action f)
+    {
+      Console.WriteLine("---------------------------------");
+      f();
+      Console.WriteLine("---------------------------------");
+    }
   }
   public static class FileSaves
   {
-    public static List<IAccount> GetAccountsDB()
+    public static List<Account> GetAccountsDB()
     {
-      List<IAccount> accounts = new List<IAccount>()
+      List<Account> accounts = new List<Account>()
       {
         new Account(0, "Zoe", 1234, 1000),
         new Account(1, "Mark", 3333, 700),
@@ -95,42 +119,85 @@
       accountsDB = FileSaves.GetAccountsDB();
     }
 
-    public List<IAccount> accountsDB;
+    public List<Account> accountsDB;
 
-    public static void Transfeer()
+    public void Transfeer() 
     {
-      IAccount Sender, Remitent;
+      Account? Sender, Remitent;
       float ammount;
+
+      Console.WriteLine("Please input your account");
+      Sender = IO.ReadAccountOwner(accountsDB);
+      if (Sender==null) return;
+      Console.WriteLine("Please input the ammount to transfeer");
+      ammount = IO.ReadInput<int>();
+      Console.WriteLine("Please input the remitent account");
+      Remitent = IO.ReadAccountRemitent(accountsDB);
+      if (Remitent == null) return;
+
       if (Sender.Decrement(ammount)) Remitent.Increment(ammount);
+      Console.WriteLine($"You have transfeer {ammount}$ to {Remitent.Owner} succesfully");
     }
-    public static void Deposit()
+    public void Deposit()
     {
       float ammount;
-      IAccount account;
-      account = 
+      Account? account;
+
+      Console.WriteLine("Please input your account");
+      account = IO.ReadAccountOwner(accountsDB);
+      if (account == null) return;
+      Console.WriteLine("Please input the ammount to deposit");
+      ammount = IO.ReadInput<int>();
+
       account.Increment(ammount);
       Console.WriteLine("Your account has been updated");
     }
-
-    public static bool Extract()
+    public void Extract()
     {
       float ammount;
-      IAccount account;
-      if (account.Decrement(ammount)) Console.WriteLine("Your account has been updated");
+      Account? account;
+
+      Console.WriteLine("Please input your account");
+      account = IO.ReadAccountOwner(accountsDB);
+      if (account == null) return;
+      Console.WriteLine("Please input the ammount to extract");
+      ammount = IO.ReadInput<int>();
+
+      
+      if(!account.Decrement(ammount)) return;
+      Console.WriteLine("Your account has been updated");
+    }
+    public void AccountStatus()
+    {
+      Account? account;
+
+      Console.WriteLine("Please input your account");
+      account = IO.ReadAccountOwner(accountsDB);
+      if(account == null) return;
+
+      Console.WriteLine("---------------------------------");
+      Console.WriteLine(account);
+      Console.WriteLine("---------------------------------");
     }
   }
   public static class Program
   {
     public static void Main(String[] args)
     {
-      string[] opciones = ["Close", "Deposit", "Extract", "Transfeer"];
+      ATM aTM = new ATM();
+
+      string[] opciones = ["Close", "Deposit", "Extract", "Transfeer", "Account Status"];
+      Action[] Functions = [() => { }, aTM.Deposit, aTM.Extract, aTM.Transfeer, aTM.AccountStatus];
       int opcion = -1;
       do
       {
+        Console.WriteLine("---------------------------------");
         Console.WriteLine("Welcome to the ATM, please select an action to do:");
         for (int i = 0; i < opciones.Length; i++)
           Console.WriteLine("{0} => {1}", i, opciones[i]);
+        Console.WriteLine("---------------------------------");
         opcion = IO.ReadIntInRange(0, opciones.Length - 1);
+        Functions[opcion].Invoke();
       } while (opcion != 0);
 
     }
