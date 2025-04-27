@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Security.Principal;
 
 namespace Program
 {
@@ -117,9 +118,12 @@ namespace Program
     public ATM()
     {
       accountsDB = FileSaves.GetAccountsDB();
+      Count = accountsDB.Aggregate(0, (a, b) => int.Max(a, b.Id)) + 1;
+      Console.WriteLine(Count);
     }
 
     public List<Account> accountsDB;
+    public int Count { get; private set; }
 
     public void Transfeer() 
     {
@@ -130,7 +134,7 @@ namespace Program
       Sender = IO.ReadAccountOwner(accountsDB);
       if (Sender==null) return;
       Console.WriteLine("Please input the ammount to transfeer");
-      ammount = IO.ReadInput<int>();
+      ammount = IO.ReadInput<float>();
       Console.WriteLine("Please input the remitent account");
       Remitent = IO.ReadAccountRemitent(accountsDB);
       if (Remitent == null) return;
@@ -147,7 +151,7 @@ namespace Program
       account = IO.ReadAccountOwner(accountsDB);
       if (account == null) return;
       Console.WriteLine("Please input the ammount to deposit");
-      ammount = IO.ReadInput<int>();
+      ammount = IO.ReadInput<float>();
 
       account.Increment(ammount);
       Console.WriteLine("Your account has been updated");
@@ -161,7 +165,7 @@ namespace Program
       account = IO.ReadAccountOwner(accountsDB);
       if (account == null) return;
       Console.WriteLine("Please input the ammount to extract");
-      ammount = IO.ReadInput<int>();
+      ammount = IO.ReadInput<float>();
 
       
       if(!account.Decrement(ammount)) return;
@@ -179,6 +183,29 @@ namespace Program
       Console.WriteLine(account);
       Console.WriteLine("---------------------------------");
     }
+    public void CreateNewAccount()
+    {
+      string? username;
+      int pin = new Random().Next(1000, 9999);
+      float initialAmmount;
+
+      Console.WriteLine("Please input an username");
+      username = IO.ReadInput<string>();
+      if (accountsDB.Any(a => a.Owner == username))
+      {
+        Console.WriteLine("This username is currently in use");
+        return;
+      }
+      Console.WriteLine("Please deposit your initial ammount");
+      initialAmmount = IO.ReadInput<float>();
+      accountsDB.Add(new Account(Count++, username, pin, initialAmmount));
+
+      Console.WriteLine($"This is your pin: {pin}\nYour Account has been created succesfully");
+      Console.WriteLine("---------------------------------");
+      Console.WriteLine(accountsDB.Find(a => a.Owner == username));
+      Console.WriteLine("---------------------------------");
+
+    }
   }
   public static class Program
   {
@@ -186,8 +213,8 @@ namespace Program
     {
       ATM aTM = new ATM();
 
-      string[] opciones = ["Close", "Deposit", "Extract", "Transfeer", "Account Status"];
-      Action[] Functions = [() => { }, aTM.Deposit, aTM.Extract, aTM.Transfeer, aTM.AccountStatus];
+      string[] opciones = ["Close", "Deposit", "Extract", "Transfeer", "Account Status", "Create New Account"];
+      Action[] Functions = [() => { }, aTM.Deposit, aTM.Extract, aTM.Transfeer, aTM.AccountStatus, aTM.CreateNewAccount];
       int opcion = -1;
       do
       {
